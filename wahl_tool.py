@@ -111,4 +111,9 @@ else:
             
     # Vorschau für dich
     if zettel_gezaehlt >= WAHLBERECHTIGTE:
-        st.warning(f"Modus: Beendet | Alle {zettel_geza
+        st.warning(f"Modus: Beendet | Alle {zettel_gezaehlt}/{WAHLBERECHTIGTE} Zettel sind erfasst.")
+    else:
+        st.info(f"Eingabemodus (Stabil) | Erfasste Zettel: {zettel_gezaehlt}/{WAHLBERECHTIGTE}")
+    
+    # Kleine Tabelle zur Kontrolle
+    st.table(pd.DataFrame(list(stimmen_dict.items()), columns=['Kandidat', 'Stimmen']))
