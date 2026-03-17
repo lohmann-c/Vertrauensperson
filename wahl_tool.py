@@ -13,7 +13,7 @@ if is_pres_mode:
     st.markdown("<meta http-equiv='refresh' content='5'>", unsafe_allow_html=True)
 
 # --- 3. KONFIGURATION ---
-KANDIDATEN_LISTE = ["Kandidat A", "Kandidat B"] 
+KANDIDATEN_LISTE = ["Nina D.", "Daniel H."] 
 WAHLBERECHTIGTE = 242
 SPEICHER_DATEI = "duell_ergebnisse.csv"
 
