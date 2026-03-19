@@ -9,7 +9,7 @@ query_params = st.query_params
 is_pres_mode = query_params.get("view") == "pres"
 
 # --- 2. KONFIGURATION ---
-KANDIDATEN_LISTE = ["Nina D.", "Daniel H.", "Platzhalter"] 
+KANDIDATEN_LISTE = ["Nina D.", "Daniel H.", "Ungültig"] 
 WAHLBERECHTIGTE = 15
 SPEICHER_DATEI = "duell_ergebnisse.csv"
 
