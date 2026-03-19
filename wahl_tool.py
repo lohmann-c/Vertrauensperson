@@ -17,22 +17,25 @@ SPEICHER_DATEI = "duell_ergebnisse.csv"
 st.set_page_config(
     page_title="Wahl-Tool", 
     layout="wide", 
+    page_icon="🗳️",
     initial_sidebar_state="collapsed" if is_pres_mode else "expanded"
 )
 
 # --- 4. FUNKTIONEN ---
 def lade_daten_aus_datei():
+    default_stimmen = {str(name): 0 for name in KANDIDATEN_LISTE}
     if os.path.exists(SPEICHER_DATEI):
         try:
             df = pd.read_csv(SPEICHER_DATEI)
+            df['Kandidat'] = df['Kandidat'].astype(str)
             stimmen = dict(zip(df.Kandidat, df.Stimmen))
             for name in KANDIDATEN_LISTE:
-                if name not in stimmen: stimmen[name] = 0
+                if str(name) not in stimmen: stimmen[str(name)] = 0
             zettel = int(df['Zettel_Gesamt'].iloc[0]) if 'Zettel_Gesamt' in df.columns else 0
             return stimmen, zettel
         except:
-            return {name: 0 for name in KANDIDATEN_LISTE}, 0
-    return {name: 0 for name in KANDIDATEN_LISTE}, 0
+            return default_stimmen, 0
+    return default_stimmen, 0
 
 def speichere_daten(stimmen_dict, zettel_anzahl):
     df = pd.DataFrame(list(stimmen_dict.items()), columns=['Kandidat', 'Stimmen'])
@@ -41,80 +44,79 @@ def speichere_daten(stimmen_dict, zettel_anzahl):
 
 stimmen_dict, zettel_gezaehlt = lade_daten_aus_datei()
 
-# --- 5. AUTOMATISCHER REFRESH (NUR FÜR BEAMER & WENN NICHT FERTIG) ---
+# --- 5. AUTOMATISCHER REFRESH ---
 if is_pres_mode and zettel_gezaehlt < WAHLBERECHTIGTE:
     st.markdown("<meta http-equiv='refresh' content='5'>", unsafe_allow_html=True)
 
-# --- 6. KONFETTI-EFFEKT (WENN FERTIG) ---
-if zettel_gezaehlt >= WAHLBERECHTIGTE:
-    st.balloons() 
-
-# --- 7. LAYOUT LOGIK ---
-
-# Vorbereitung der Grafik für beide Ansichten
+# --- 6. DATENAUFBEREITUNG & GRAFIK ---
 df_plot = pd.DataFrame(list(stimmen_dict.items()), columns=['Kandidat', 'Stimmen'])
+df_plot['Kandidat'] = df_plot['Kandidat'].astype(str)
 df_plot = df_plot.sort_values(by='Stimmen', ascending=False).reset_index(drop=True)
-fig, ax = plt.subplots(figsize=(12, 6))
-colors = ['#3498db', '#e74c3c', '#2ecc71'] 
+
+fig, ax = plt.subplots(figsize=(10, 5))
+colors = ['#3498db', '#e74c3c', '#95a5a6'] # Blau, Rot, Grau
 bars = ax.barh(df_plot['Kandidat'], df_plot['Stimmen'], color=colors[:len(df_plot)])
 ax.invert_yaxis()
-ax.bar_label(bars, padding=15, fontsize=30, fontweight='bold') 
-ax.tick_params(axis='y', labelsize=25)
+ax.bar_label(bars, padding=10, fontsize=20, fontweight='bold') 
+ax.tick_params(axis='y', labelsize=15)
+plt.tight_layout()
+
+# --- 7. LAYOUT LOGIK ---
 
 if is_pres_mode:
     # --- ANSICHT FÜR DEN BEAMER (PUBLIKUM) ---
     if zettel_gezaehlt >= WAHLBERECHTIGTE:
-        st.title("🎉 Endergebnis der Auszählung 🎉")
+        st.balloons()
+        # Gewinner ermitteln (Platz 1 in der sortierten Liste)
+        sieger = df_plot.iloc[0]['Kandidat']
+        st.markdown(f"""
+            <div style="background-color:#2ecc71; padding:20px; border-radius:10px; border: 5px solid #27ae60; text-align:center;">
+                <h1 style="color:white; margin:0; font-size: 50px;">🎉 Herzlichen Glückwunsch 🎉</h1>
+                <h2 style="color:white; margin:10px 0; font-size: 40px;">{sieger} ist gewählt!</h2>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.title("📊 Aktueller Stand der Auszählung")
+        st.markdown("<h2 style='text-align: center;'>📊 Aktueller Stand der Auszählung</h2>", unsafe_allow_html=True)
     
     st.pyplot(fig)
     
-    if zettel_gezaehlt >= WAHLBERECHTIGTE:
-        st.success(f"Alle {WAHLBERECHTIGTE} Stimmen wurden erfolgreich erfasst.")
-    else:
-        st.subheader(f"Fortschritt: {zettel_gezaehlt} von {WAHLBERECHTIGTE} Stimmen")
+    c1, c2 = st.columns(2)
+    with c1: st.metric("Stimmen erfasst", f"{zettel_gezaehlt} / {WAHLBERECHTIGTE}")
+    with c2: 
+        if zettel_gezaehlt < WAHLBERECHTIGTE:
+            st.info(f"Fortschritt: {int(zettel_gezaehlt/WAHLBERECHTIGTE*100)}%")
+        else:
+            st.success("Ergebnis final bestätigt.")
 
 else:
     # --- ADMIN-ANSICHT (DEIN LAPTOP) ---
     st.title("⚖️ Wahl-Administration")
     
-    with st.sidebar:
-        st.header("🗳️ Stimmen erfassen")
+    col_input, col_preview = st.columns([1, 2])
+    
+    with col_input:
+        st.subheader("Eingabe")
         with st.form("wahl_form", clear_on_submit=True):
-            wahl = st.radio("Kandidat auswählen:", KANDIDATEN_LISTE)
-            submit = st.form_submit_button("Stimme speichern")
-            
-            if submit:
+            wahl = st.radio("Kandidat:", KANDIDATEN_LISTE)
+            if st.form_submit_button("Stimme speichern"):
                 if zettel_gezaehlt < WAHLBERECHTIGTE:
-                    stimmen_dict[wahl] += 1
+                    stimmen_dict[str(wahl)] += 1
                     zettel_gezaehlt += 1
                     speichere_daten(stimmen_dict, zettel_gezaehlt)
                     st.rerun()
                 else:
-                    st.error(f"Limit erreicht!")
+                    st.error("Limit erreicht!")
         
-        st.markdown("---")
         if st.button("🗑️ Daten löschen / Reset"):
             if os.path.exists(SPEICHER_DATEI): os.remove(SPEICHER_DATEI)
             st.rerun()
-            
-    # Status-Meldungen
-    if zettel_gezaehlt >= WAHLBERECHTIGTE:
-        st.warning(f"Wahlergebnis liegt vor ({zettel_gezaehlt}/{WAHLBERECHTIGTE})")
-        
-        # --- EXPORT FUNKTION ---
-        # Speichert das aktuelle Diagramm in einen Buffer für den Download
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches='tight')
-        st.download_button(
-            label="📸 Endergebnis als Bild (PNG) speichern",
-            data=buf.getvalue(),
-            file_name="wahlergebnis_final.png",
-            mime="image/png"
-        )
-    else:
-        st.info(f"Eingabemodus | Erfasste Zettel: {zettel_gezaehlt}/{WAHLBERECHTIGTE}")
-    
-    st.pyplot(fig) # Vorschau-Grafik für dich
+
+    with col_preview:
+        st.pyplot(fig)
+        # Download Button nur am Ende
+        if zettel_gezaehlt >= WAHLBERECHTIGTE:
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches='tight')
+            st.download_button("📸 Bild speichern", buf.getvalue(), "ergebnis.png", "image/png")
+
     st.table(df_plot)
