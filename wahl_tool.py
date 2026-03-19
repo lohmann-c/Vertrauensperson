@@ -10,7 +10,7 @@ is_pres_mode = query_params.get("view") == "pres"
 
 # --- 2. KONFIGURATION ---
 KANDIDATEN_LISTE = ["Nina", "Daniel", "Ungültig"] 
-WAHLBERECHTIGTE = 164
+WAHLBERECHTIGTE = 10
 SPEICHER_DATEI = "duell_ergebnisse.csv"
 
 # --- 3. SEITENKONFIGURATION ---
